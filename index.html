@@ -1,0 +1,394 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  Users, 
+  ShoppingCart, 
+  QrCode, 
+  CheckCircle, 
+  ChevronLeft, 
+  LogOut, 
+  Trash2,
+  ClipboardList,
+  Utensils
+} from 'lucide-react';
+
+// Komponen Logo Steak dengan teks "STEAKUNG" di bawahnya
+const SteakLogoWithText = ({ className, size = "large" }) => (
+  <div className={`flex flex-col items-center ${className}`}>
+    <div className={`flex items-center justify-center bg-red-700 rounded-full border-4 border-white shadow-xl ${size === 'large' ? 'w-48 h-48' : 'w-14 h-14 border-2'}`}>
+      <svg 
+        viewBox="0 0 24 24" 
+        fill="none" 
+        stroke="white" 
+        strokeWidth="1.5" 
+        strokeLinecap="round" 
+        strokeLinejoin="round" 
+        className="w-2/3 h-2/3"
+      >
+        <path d="M12 2c5.5 0 10 3.5 10 8s-4.5 8-10 8-10-3.5-10-8 4.5-8 10-8z" />
+        <path d="M12 18c-2.5 0-5-1-5-3s2.5-3 5-3 5 1 5 3-2.5 3-5 3z" />
+        <path d="M7 11c1.5-1 3-1.5 5-1.5s3.5.5 5 1.5" />
+        <path d="M9 15c1-.5 2-.8 3-.8s2 .3 3 .8" />
+        <path d="M15 6l1-1" />
+        <path d="M17 8l1-1" />
+      </svg>
+    </div>
+    <h1 className={`font-black text-neutral-900 tracking-tighter uppercase italic mt-4 ${size === 'large' ? 'text-4xl' : 'hidden'}`}>
+      STEAK<span className="text-red-700">UNG</span>
+    </h1>
+  </div>
+);
+
+// Mock Data Menu
+const MENU_ITEMS = [
+  { id: 1, name: "Ribeye Steak", price: 85000, category: "Makanan", image: "https://images.unsplash.com/photo-1600891964599-f61ba0e24092?w=400" },
+  { id: 2, name: "Wagyu A5 BBQ", price: 150000, category: "Makanan", image: "https://images.unsplash.com/photo-1544025162-d76694265947?w=400" },
+  { id: 3, name: "Lemon Tea Ice", price: 15000, category: "Minuman", image: "https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400" }
+];
+
+const App = () => {
+  const [view, setView] = useState('landing'); 
+  const [user, setUser] = useState(null); 
+  const [cart, setCart] = useState([]);
+  const [orders, setOrders] = useState([]); 
+  const [showPayment, setShowPayment] = useState(false);
+
+  const formatIDR = (price) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0
+    }).format(price);
+  };
+
+  const handleCustomerLogin = (e) => {
+    e.preventDefault();
+    const tableNum = e.target.tableNumber.value;
+    if (tableNum) {
+      setUser({ role: 'customer', table: tableNum });
+      setView('customerMenu');
+    }
+  };
+
+  const handleStaffLogin = (e) => {
+    e.preventDefault();
+    const username = e.target.username.value;
+    const password = e.target.password.value;
+    if (username === 'admin' && password === 'admin') {
+      setUser({ role: 'staff' });
+      setView('staffDashboard');
+    } else {
+      alert('Login Gagal!');
+    }
+  };
+
+  const addToCart = (item) => {
+    setCart(prev => {
+      const existing = prev.find(i => i.id === item.id);
+      if (existing) {
+        return prev.map(i => i.id === item.id ? { ...i, qty: i.qty + 1 } : i);
+      }
+      return [...prev, { ...item, qty: 1 }];
+    });
+  };
+
+  const removeFromCart = (id) => {
+    setCart(prev => prev.filter(item => item.id !== id));
+  };
+
+  const totalAmount = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
+
+  const processPayment = () => {
+    const newOrder = {
+      id: Date.now(),
+      table: user.table,
+      items: [...cart],
+      total: totalAmount,
+      status: 'Lunas',
+      time: new Date().toLocaleTimeString()
+    };
+    setOrders([...orders, newOrder]);
+    setShowPayment(true);
+    setCart([]);
+    document.getElementById('cart-modal')?.classList.add('hidden');
+  };
+
+  const logout = () => {
+    setUser(null);
+    setView('landing');
+    setCart([]);
+    setShowPayment(false);
+  };
+
+  const LandingPage = () => (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-neutral-950 p-6 text-center">
+      <div className="bg-white p-10 rounded-[3rem] shadow-2xl max-w-sm w-full border-t-[12px] border-red-700">
+        <div className="mb-6 flex justify-center">
+          <SteakLogoWithText className="-mt-24" />
+        </div>
+        
+        <div className="space-y-4 mt-6">
+          <button 
+            onClick={() => setView('customerLogin')}
+            className="w-full bg-red-700 hover:bg-red-800 text-white font-black py-5 rounded-2xl transition-all flex items-center justify-center gap-3 shadow-lg active:scale-95 text-lg uppercase"
+          >
+            <Users className="w-6 h-6" /> PESAN SEKARANG
+          </button>
+          <button 
+            onClick={() => setView('staffLogin')}
+            className="w-full bg-neutral-900 hover:bg-black text-white font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-3 shadow-md active:scale-95"
+          >
+            <ClipboardList className="w-5 h-5 text-red-600" /> MASUK STAF
+          </button>
+        </div>
+      </div>
+      <p className="mt-12 text-neutral-600 font-bold text-[10px] tracking-[0.3em] uppercase">Premium Steakhouse App</p>
+    </div>
+  );
+
+  const CustomerLoginForm = () => (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-neutral-950 p-6">
+      <div className="bg-white p-8 rounded-[2.5rem] shadow-xl max-w-sm w-full">
+        <button onClick={() => setView('landing')} className="mb-8 text-neutral-400 hover:text-red-700 transition flex items-center gap-2 font-black text-xs uppercase">
+          <ChevronLeft className="w-5 h-5" /> KEMBALI
+        </button>
+        <div className="flex justify-center mb-6">
+           <SteakLogoWithText size="large" />
+        </div>
+        <h2 className="text-2xl font-black text-neutral-900 mb-8 text-center uppercase tracking-tighter">Pilih Meja Anda</h2>
+        <form onSubmit={handleCustomerLogin} className="space-y-6">
+          <select 
+            name="tableNumber" 
+            className="w-full p-5 border-2 border-neutral-100 rounded-2xl bg-neutral-50 focus:border-red-700 focus:outline-none text-xl font-black text-center appearance-none cursor-pointer"
+            required
+          >
+            <option value="">-- NO. MEJA --</option>
+            {[1, 2, 3, 4, 5, 6, 7, 8].map(n => (
+              <option key={n} value={n}>MEJA {n}</option>
+            ))}
+          </select>
+          <button type="submit" className="w-full bg-red-700 hover:bg-red-800 text-white font-black py-5 rounded-2xl transition shadow-xl active:scale-95 text-lg">
+            KONFIRMASI
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+
+  const StaffLoginForm = () => (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-neutral-100 p-6">
+      <div className="bg-white p-8 rounded-[2.5rem] shadow-xl max-w-sm w-full border-b-8 border-neutral-900">
+        <button onClick={() => setView('landing')} className="mb-8 text-neutral-400 hover:text-neutral-900 transition flex items-center gap-2 font-black text-xs uppercase">
+          <ChevronLeft className="w-5 h-5" /> KEMBALI
+        </button>
+        <div className="flex justify-center mb-4 opacity-20 grayscale">
+           <SteakLogoWithText size="large" />
+        </div>
+        <h2 className="text-2xl font-black text-neutral-800 mb-8 text-center uppercase tracking-tighter">Akses Staf</h2>
+        <form onSubmit={handleStaffLogin} className="space-y-4">
+          <input 
+            name="username" 
+            type="text" 
+            placeholder="Username"
+            className="w-full p-4 border-2 border-neutral-100 rounded-xl bg-neutral-50 focus:border-neutral-900 focus:outline-none font-bold" 
+            required
+          />
+          <input 
+            name="password" 
+            type="password" 
+            placeholder="Password"
+            className="w-full p-4 border-2 border-neutral-100 rounded-xl bg-neutral-50 focus:border-neutral-900 focus:outline-none font-bold" 
+            required
+          />
+          <button type="submit" className="w-full bg-neutral-900 hover:bg-black text-white font-black py-4 rounded-xl transition shadow-lg active:scale-95">
+            LOG MASUK
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+
+  const CustomerMenu = () => (
+    <div className="min-h-screen bg-neutral-50 pb-32">
+      <header className="bg-red-700 text-white p-6 sticky top-0 z-10 shadow-lg flex justify-between items-center">
+        <div className="flex items-center gap-4">
+          <SteakLogoWithText size="small" />
+          <div>
+            <h2 className="font-black text-xl tracking-tighter leading-none uppercase italic">STEAKUNG</h2>
+            <p className="text-red-200 text-[10px] font-black uppercase tracking-widest mt-1">MEJA NOMOR {user.table}</p>
+          </div>
+        </div>
+        <button onClick={logout} className="bg-white/20 p-2 rounded-xl hover:bg-white/30 transition">
+          <LogOut className="w-6 h-6" />
+        </button>
+      </header>
+
+      <div className="p-6 max-w-2xl mx-auto">
+        {showPayment ? (
+          <div className="text-center py-16 animate-in fade-in zoom-in">
+            <div className="bg-green-100 text-green-600 w-28 h-28 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
+              <CheckCircle className="w-16 h-16" />
+            </div>
+            <h2 className="text-3xl font-black text-neutral-900 mb-4 uppercase">TERIMA KASIH!</h2>
+            <p className="text-neutral-500 mb-10 font-bold">Pesanan Anda sedang diproses oleh koki kami.</p>
+            <button 
+              onClick={() => setShowPayment(false)}
+              className="px-10 py-4 bg-red-700 text-white font-black rounded-2xl shadow-xl hover:bg-red-800 transition"
+            >
+              PESAN LAGI
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between mb-8">
+              <h3 className="text-2xl font-black text-neutral-900 uppercase tracking-tighter flex items-center gap-3">
+                <div className="w-2 h-8 bg-red-700 rounded-full"></div> MENU KAMI
+              </h3>
+            </div>
+            
+            <div className="grid gap-6">
+              {MENU_ITEMS.map(item => (
+                <div key={item.id} className="flex bg-white rounded-[2.5rem] overflow-hidden shadow-sm border border-neutral-100 hover:shadow-xl transition-all group p-3">
+                  <div className="w-28 h-28 rounded-2xl overflow-hidden flex-shrink-0 shadow-md">
+                    <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                  </div>
+                  <div className="p-4 flex-1 flex flex-col justify-between">
+                    <div>
+                      <h4 className="font-black text-neutral-900 text-lg uppercase leading-tight">{item.name}</h4>
+                      <p className="text-red-700 font-black text-xl mt-1">{formatIDR(item.price)}</p>
+                    </div>
+                    <button 
+                      onClick={() => addToCart(item)}
+                      className="self-end bg-neutral-950 text-white px-5 py-2 rounded-xl hover:bg-red-700 transition-colors flex items-center gap-2 text-xs font-black active:scale-90"
+                    >
+                      TAMBAH +
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      {!showPayment && cart.length > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 p-6 bg-white/90 backdrop-blur-xl border-t border-neutral-100 z-20">
+          <div className="max-w-2xl mx-auto flex gap-4">
+            <div className="flex-1">
+                <p className="text-[10px] text-neutral-400 font-black uppercase tracking-widest leading-none">Total</p>
+                <p className="text-2xl font-black text-neutral-950">{formatIDR(totalAmount)}</p>
+            </div>
+            <button 
+              onClick={() => document.getElementById('cart-modal').classList.remove('hidden')}
+              className="flex-[2] bg-red-700 text-white py-4 rounded-2xl font-black shadow-xl flex items-center justify-center gap-3 active:scale-95 transition"
+            >
+              <ShoppingCart className="w-5 h-5" /> LIHAT KERANJANG ({cart.reduce((a,b) => a + b.qty, 0)})
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Cart Modal */}
+      <div id="cart-modal" className="hidden fixed inset-0 bg-neutral-950/80 z-50 flex items-end justify-center">
+        <div className="bg-white w-full max-w-xl rounded-t-[3.5rem] p-10 animate-in slide-in-from-bottom duration-300">
+          <div className="flex justify-between items-center mb-8">
+            <h3 className="text-3xl font-black text-neutral-900 uppercase">Keranjang</h3>
+            <button onClick={() => document.getElementById('cart-modal').classList.add('hidden')} className="bg-neutral-100 p-2 rounded-full text-neutral-400 hover:text-red-700">
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="space-y-4 max-h-[35vh] overflow-y-auto mb-10 pr-2">
+            {cart.map(item => (
+              <div key={item.id} className="flex justify-between items-center bg-neutral-50 p-5 rounded-[2rem] border border-neutral-100">
+                <div className="flex items-center gap-4">
+                  <div className="bg-red-700 text-white font-black w-10 h-10 flex items-center justify-center rounded-xl text-sm">{item.qty}x</div>
+                  <div>
+                    <h5 className="font-black text-neutral-900 uppercase">{item.name}</h5>
+                    <p className="text-xs text-neutral-400 font-bold">{formatIDR(item.price * item.qty)}</p>
+                  </div>
+                </div>
+                <button onClick={() => removeFromCart(item.id)} className="text-red-300 hover:text-red-700 transition"><Trash2 className="w-5 h-5" /></button>
+              </div>
+            ))}
+          </div>
+          <div className="border-t-4 border-double border-neutral-100 pt-8 space-y-6">
+            <div className="flex justify-between text-2xl font-black text-neutral-900 uppercase">
+              <span>TOTAL</span>
+              <span className="text-red-700">{formatIDR(totalAmount)}</span>
+            </div>
+            <div className="bg-neutral-50 p-8 rounded-[2.5rem] flex flex-col items-center border border-neutral-100">
+              <div className="bg-white p-6 rounded-3xl shadow-xl mb-8">
+                 <QrCode className="w-32 h-32 text-neutral-900" />
+              </div>
+              <button onClick={processPayment} className="w-full bg-red-700 hover:bg-red-800 text-white font-black py-5 rounded-2xl shadow-xl transition active:scale-95 text-lg uppercase">Bayar & Pesan</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const StaffDashboard = () => (
+    <div className="min-h-screen bg-neutral-50">
+      <header className="bg-neutral-950 text-white p-6 sticky top-0 z-10 shadow-lg flex justify-between items-center">
+        <div className="flex items-center gap-3">
+          <SteakLogoWithText size="small" className="grayscale" />
+          <div>
+            <h2 className="font-black text-xl tracking-tighter leading-none uppercase">STAFF <span className="text-red-600">DASHBOARD</span></h2>
+          </div>
+        </div>
+        <button onClick={logout} className="bg-red-700/20 text-red-500 px-4 py-2 rounded-xl font-black text-xs uppercase">
+          Logout
+        </button>
+      </header>
+      <div className="p-6 max-w-4xl mx-auto">
+        <h3 className="text-3xl font-black text-neutral-900 flex items-center gap-3 uppercase tracking-tighter mb-10">
+          <ClipboardList className="w-8 h-8 text-red-700" /> Pesanan Masuk
+        </h3>
+        {orders.length === 0 ? (
+          <div className="bg-white rounded-[3rem] p-20 text-center border-4 border-dashed border-neutral-100 shadow-sm">
+            <p className="text-neutral-400 font-black uppercase tracking-widest">Tidak ada pesanan</p>
+          </div>
+        ) : (
+          <div className="grid gap-8">
+            {orders.slice().reverse().map(order => (
+              <div key={order.id} className="bg-white rounded-[2.5rem] p-8 shadow-xl border border-neutral-100 animate-in slide-in-from-right duration-500">
+                <div className="flex justify-between items-start mb-8">
+                  <div>
+                    <h4 className="text-3xl font-black text-neutral-900 tracking-tighter uppercase">MEJA {order.table}</h4>
+                    <p className="text-neutral-400 text-xs font-black mt-1 uppercase tracking-widest">{order.time}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="bg-green-600 text-white px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">LUNAS</span>
+                    <p className="text-2xl font-black text-red-700 mt-2">{formatIDR(order.total)}</p>
+                  </div>
+                </div>
+                <div className="space-y-4 bg-neutral-50 p-6 rounded-[2rem] mb-8 border border-neutral-100">
+                  {order.items.map((it, idx) => (
+                    <div key={idx} className="flex justify-between text-sm items-center">
+                      <span className="text-neutral-600 font-bold uppercase tracking-tight">
+                         {it.qty}x {it.name}
+                      </span>
+                      <span className="font-black text-neutral-900">{formatIDR(it.price * it.qty)}</span>
+                    </div>
+                  ))}
+                </div>
+                <button className="w-full bg-neutral-900 text-white font-black py-4 rounded-2xl uppercase tracking-wider">Selesaikan Pesanan</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  switch(view) {
+    case 'landing': return <LandingPage />;
+    case 'customerLogin': return <CustomerLoginForm />;
+    case 'staffLogin': return <StaffLoginForm />;
+    case 'customerMenu': return <CustomerMenu />;
+    case 'staffDashboard': return <StaffDashboard />;
+    default: return <LandingPage />;
+  }
+};
+
+export default App;
